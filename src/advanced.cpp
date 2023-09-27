@@ -27,6 +27,7 @@ void Execute(int row, int column) {
   str = oss.str();                     // Read the output
   std::istringstream iss(str);         // Redirect the input to the string, which stores the output recently
   std::streambuf *old_input_buffer = std::cin.rdbuf();
+  std::cin.rdbuf(iss.rdbuf());
   ReadMap();
   std::cin.rdbuf(old_input_buffer);
 }

@@ -3,6 +3,8 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <set>
+#include <utility>
 
 /*
  * You may need to define some global variables for the information of the game map here.
@@ -10,9 +12,19 @@
  * class is not taught yet. However, if you are member of A-class or have learnt the use of cpp class, member functions,
  * etc., you're free to modify this structure.
  */
+
+constexpr int MAXN = 1e3 + 5;
+
 int rows; // The count of rows of the game map
 int columns;  // The count of columns of the game map
 int game_state; // The state of the game, 0 for continuing, 1 for winning, -1 for losing
+int total_safe_block; // The count of safe blocks
+int visit_count;  // The count of blocks visited
+int step_count; // The count of steps taken
+int mine_count[MAXN][MAXN];  // The count of mines in the adjacent blocks of (i, j), -1 if (i, j) is a mine
+bool visited[MAXN][MAXN];    // Whether the block (i, j) has been visited
+
+std::set<std::pair<int, int>> visited_blocks;
 
 /**
  * @brief The definition of function InitMap()
@@ -28,7 +40,63 @@ int game_state; // The state of the game, 0 for continuing, 1 for winning, -1 fo
  */
 void InitMap() {
   std::cin >> rows >> columns;
-  // TODO (student): Implement me!
+  for (int i = 0; i < rows; ++i) {
+    std::string line;
+    std::cin >> line;
+    for (int j = 0; j < columns; ++j) {
+      if (line[j] == 'X') {
+        mine_count[i][j] = -1;
+      } else {
+        mine_count[i][j] = 0;
+        total_safe_block++;
+      }
+      visited[i][j] = false;
+    }
+  }
+  for (int i = 0; i < rows; ++i) {
+    for (int j = 0; j < columns; ++j) {
+      if (mine_count[i][j] == -1) {
+        continue;
+      }
+      for (int dx = -1; dx <= 1; ++dx) {
+        for (int dy = -1; dy <= 1; ++dy) {
+          int nx = i + dx;
+          int ny = j + dy;
+          if (nx < 0 || nx >= rows || ny < 0 || ny >= columns) {
+            continue;
+          }
+          if (mine_count[nx][ny] == -1) {
+            ++mine_count[i][j];
+          }
+        }
+      }
+    }
+  }
+}
+
+void VisitRecursive(unsigned int row, unsigned int column) {
+  if (visited[row][column]) {
+    return;
+  }
+  if (mine_count[row][column] == -1) {
+    return;
+  }
+  visited[row][column] = true;
+  visit_count++;
+  visited_blocks.insert(std::pair<int, int>(row, column));
+  if (mine_count[row][column] != 0) {
+    return;
+  }
+  for (int dx = -1; dx <= 1; ++dx) {
+    for (int dy = -1; dy <= 1; ++dy) {
+      int nx = row + dx;
+      int ny = column + dy;
+      if (nx < 0 || nx >= rows || ny < 0 || ny >= columns) {
+        continue;
+      }
+      VisitRecursive(nx, ny);
+    }
+  }
 }
 
 /**
@@ -59,8 +127,21 @@ void InitMap() {
  *    1  if the game ends and the player wins.
  *    -1 if the game ends and the player loses.
  */
-void VisitBlock(int row, int column) {  
-  // TODO (student): Implement me!
+void VisitBlock(unsigned int row, unsigned int column) {  
+  step_count++;
+  if (visited[row][column]) {
+    game_state = 0;
+    return;
+  }
+  if (mine_count[row][column] == -1) {
+    visited[row][column] = true;
+    game_state = -1;
+    return;
+  }
+  VisitRecursive(row, column);
+  if (game_state != -1 && visit_count == total_safe_block) {
+    game_state = 1;
+  }
 }
 
 /**
@@ -88,7 +169,21 @@ void VisitBlock(int row, int column) {
  * @note Use std::cout to print the game map, especially when you want to try the advanced task!!!
  */
 void PrintMap() {
-  // TODO (student): Implement me!
+  for (int i = 0; i < rows; ++i) {
+    std::string line;
+    for (int j = 0; j < columns; ++j) {
+      if (visited[i][j]) {
+        if (mine_count[i][j] == -1) {
+          line += 'X';
+        } else {
+          line += std::to_string(mine_count[i][j]);
+        }
+      } else {
+        line += (game_state != 1 ? '?' : '@');
+      }
+    }
+    std::cout << line << std::endl;
+  }
 }
 
 /**
@@ -99,7 +194,12 @@ void PrintMap() {
  * representing the number of blocks visited and the number of steps taken respectively.
  */
 void ExitGame() {
-  // TODO (student): Implement me!
+  if (game_state == 1) {
+    std::cout << "YOU WIN!" << std::endl;
+  } else {
+    std::cout << "GAME OVER!" << std::endl;
+  }
+  std::cout << visit_count << " " << step_count << std::endl;
   exit(0); // Exit the game immediately
 }
 
